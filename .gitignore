@@ -1,0 +1,19 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!*.tfvars.example
+crash.log
+
+# Python / FastAPI
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+!.env.example
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
