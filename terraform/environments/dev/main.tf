@@ -30,3 +30,10 @@ module "vpc" {
   availability_zones    = var.availability_zones
   environment           = var.environment
 }
+
+module "security_groups" {
+  source = "../../modules/security-groups"
+
+  vpc_id       = module.vpc.vpc_id
+  environment  = var.environment
+}
