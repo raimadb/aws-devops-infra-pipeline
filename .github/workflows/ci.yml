@@ -35,7 +35,7 @@ jobs:
         run: pip install -r app/requirements-dev.txt
 
       - name: Ruff check
-        run: ruff check app
+        run: cd app && ruff check .
 
   test:
     name: Unit and integration tests

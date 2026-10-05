@@ -1,0 +1,7 @@
+# Lives in app/ so ruff treats app/ as the project root. That makes config.py,
+# database.py, etc. first-party modules, whether ruff runs here or from the repo root.
+src = ["."]
+
+[lint]
+# E/F: pycodestyle and pyflakes basics. I: import sorting. B: likely-bug checks.
+select = ["E4", "E7", "E9", "F", "I", "B"]
