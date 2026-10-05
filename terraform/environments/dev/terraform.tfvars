@@ -4,3 +4,6 @@ private_subnet_cidrs  = ["10.0.11.0/24", "10.0.12.0/24"]
 availability_zones    = ["ap-south-1a", "ap-south-1b"]
 environment           = "dev"
 db_username           = "appadmin"
+db_instance_class          = "db.t3.micro"
+db_multi_az                = false
+db_backup_retention_period = 1

@@ -48,3 +48,16 @@ module "secrets" {
   db_username = var.db_username
   environment = var.environment
 }
+
+module "rds" {
+  source = "../../modules/rds"
+
+  environment             = var.environment
+  private_subnet_ids      = module.vpc.private_subnet_ids
+  rds_sg_id               = module.security_groups.rds_sg_id
+  db_username_param       = module.secrets.db_username_param
+  db_password_param       = module.secrets.db_password_param
+  instance_class          = var.db_instance_class
+  multi_az                = var.db_multi_az
+  backup_retention_period = var.db_backup_retention_period
+}
