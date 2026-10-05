@@ -21,3 +21,11 @@ output "app_sg_id" {
 output "rds_sg_id" {
   value = module.security_groups.rds_sg_id
 }
+
+output "db_username_param" {
+  value = module.secrets.db_username_param
+}
+
+output "db_password_param" {
+  value = module.secrets.db_password_param
+}

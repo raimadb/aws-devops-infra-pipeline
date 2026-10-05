@@ -17,3 +17,8 @@ variable "availability_zones" {
 variable "environment" {
   type = string
 }
+
+variable "db_username" {
+  type        = string
+  description = "Master username for the RDS instance"
+}

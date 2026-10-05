@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
 
   backend "s3" {
@@ -36,4 +40,11 @@ module "security_groups" {
 
   vpc_id       = module.vpc.vpc_id
   environment  = var.environment
+}
+
+module "secrets" {
+  source = "../../modules/secrets"
+
+  db_username = var.db_username
+  environment = var.environment
 }
