@@ -1,7 +1,7 @@
 resource "aws_vpc" "main" {
-  cidr_block = var.vpc_cidr
+  cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
-  enable_dns_support = true
+  enable_dns_support   = true
 }
 
 resource "aws_subnet" "public" {
@@ -40,9 +40,9 @@ resource "aws_internet_gateway" "gw" {
 }
 
 resource "aws_eip" "nat" {
-  domain   = "vpc"
+  domain = "vpc"
 
-tags = {
+  tags = {
     Name        = "${var.environment}-nat-eip"
     Environment = var.environment
   }
@@ -53,7 +53,7 @@ resource "aws_nat_gateway" "main" {
   subnet_id     = aws_subnet.public[0].id
 
   tags = {
-    Name = "${var.environment}-nat-gateway"
+    Name        = "${var.environment}-nat-gateway"
     Environment = var.environment
   }
 
@@ -69,7 +69,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "${var.environment}-public-rt"
+    Name        = "${var.environment}-public-rt"
     Environment = var.environment
   }
 }
@@ -84,12 +84,12 @@ resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
 
   route {
-    cidr_block = "0.0.0.0/0"
+    cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.main.id
   }
 
   tags = {
-    Name = "${var.environment}-private-rt"
+    Name        = "${var.environment}-private-rt"
     Environment = var.environment
   }
 }

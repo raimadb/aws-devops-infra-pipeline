@@ -34,3 +34,7 @@ variable "db_multi_az" {
 variable "db_backup_retention_period" {
   type = number
 }
+
+variable "ecr_force_delete" {
+  type = bool
+}

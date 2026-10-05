@@ -51,11 +51,11 @@ resource "aws_vpc_security_group_egress_rule" "alb_all" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "app_from_alb" {
-  security_group_id = aws_security_group.app.id
-  referenced_security_group_id  = aws_security_group.alb.id
-  from_port         = 8000
-  ip_protocol       = "tcp"
-  to_port           = 8000
+  security_group_id            = aws_security_group.app.id
+  referenced_security_group_id = aws_security_group.alb.id
+  from_port                    = 8000
+  ip_protocol                  = "tcp"
+  to_port                      = 8000
 
   tags = {
     Name = "${var.environment}-app-alb"
@@ -73,11 +73,11 @@ resource "aws_vpc_security_group_egress_rule" "app_all" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "rds_from_app" {
-  security_group_id = aws_security_group.rds.id
-  referenced_security_group_id  = aws_security_group.app.id
-  from_port         = 5432
-  ip_protocol       = "tcp"
-  to_port           = 5432
+  security_group_id            = aws_security_group.rds.id
+  referenced_security_group_id = aws_security_group.app.id
+  from_port                    = 5432
+  ip_protocol                  = "tcp"
+  to_port                      = 5432
 
   tags = {
     Name = "${var.environment}-rds-app"

@@ -49,3 +49,7 @@ output "target_group_arn" {
 output "alb_arn_suffix" {
   value = module.alb.alb_arn_suffix
 }
+
+output "ecr_repository_url" {
+  value = module.ecr.repository_url
+}

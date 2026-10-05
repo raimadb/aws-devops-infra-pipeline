@@ -7,3 +7,5 @@ db_username                = "appadmin"
 db_instance_class          = "db.t3.micro"
 db_multi_az                = false
 db_backup_retention_period = 1
+
+ecr_force_delete = true
