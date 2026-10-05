@@ -96,3 +96,15 @@ module "compute" {
   memory             = var.app_memory
   desired_count      = var.app_desired_count
 }
+
+module "monitoring" {
+  source = "../../modules/monitoring"
+
+  environment      = var.environment
+  cluster_name     = module.compute.cluster_name
+  service_name     = module.compute.service_name
+  log_group_name   = module.compute.log_group_name
+  alb_arn_suffix   = module.alb.alb_arn_suffix
+  target_group_arn = module.alb.target_group_arn
+  db_identifier    = module.rds.db_identifier
+}

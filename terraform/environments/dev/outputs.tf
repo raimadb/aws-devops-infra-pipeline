@@ -65,3 +65,7 @@ output "ecs_service_name" {
 output "app_log_group" {
   value = module.compute.log_group_name
 }
+
+output "dashboard_urls" {
+  value = module.monitoring.dashboard_urls
+}

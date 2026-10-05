@@ -9,3 +9,7 @@ output "db_port" {
 output "db_name" {
   value = aws_db_instance.main.db_name
 }
+
+output "db_identifier" {
+  value = aws_db_instance.main.identifier
+}
