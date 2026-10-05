@@ -86,16 +86,15 @@ I want to understand every piece, so explain what you do and why as you go.
 - Security groups chained by reference, so tiers can only talk to their neighbours.
 
 ## Current status
-- DONE and applied in dev: bootstrap, VPC module, security groups, secrets (SSM).
-- RDS module written and planned (2 to add), NOT yet applied or committed.
+- DONE and applied in dev: bootstrap, VPC module, security groups, secrets (SSM), RDS module.
+- RDS applied and committed (commit b40861a).
 - TODO in order:
-  1. Apply RDS, verify, commit
-  2. ALB module
-  3. ECR + compute module (ECS Fargate)
-  4. FastAPI app: /health, Postgres CRUD, pytest unit + integration tests, Dockerfile
-  5. ci.yml (pytest, lint, Trivy dependency + image scan)
-  6. cd-dev.yml (build, push to ECR, deploy)
-  7. monitoring module (log groups + 2 dashboards)
-  8. Replicate dev to qa and production environment folders
-  9. cd-qa.yml and cd-production.yml (approval gate), Slack failure notifications
-  10. README.md, CHALLENGES.md, docs/architecture.md, docs/runbook.md
+  1. ALB module
+  2. ECR + compute module (ECS Fargate)
+  3. FastAPI app: /health, Postgres CRUD, pytest unit + integration tests, Dockerfile
+  4. ci.yml (pytest, lint, Trivy dependency + image scan)
+  5. cd-dev.yml (build, push to ECR, deploy)
+  6. monitoring module (log groups + 2 dashboards)
+  7. Replicate dev to qa and production environment folders
+  8. cd-qa.yml and cd-production.yml (approval gate), Slack failure notifications
+  9. README.md, CHALLENGES.md, docs/architecture.md, docs/runbook.md

@@ -37,3 +37,15 @@ output "db_address" {
 output "db_port" {
   value = module.rds.db_port
 }
+
+output "alb_dns_name" {
+  value = module.alb.alb_dns_name
+}
+
+output "target_group_arn" {
+  value = module.alb.target_group_arn
+}
+
+output "alb_arn_suffix" {
+  value = module.alb.alb_arn_suffix
+}

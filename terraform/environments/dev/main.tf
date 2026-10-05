@@ -28,18 +28,18 @@ provider "aws" {
 module "vpc" {
   source = "../../modules/vpc"
 
-  vpc_cidr              = var.vpc_cidr
-  public_subnet_cidrs   = var.public_subnet_cidrs
-  private_subnet_cidrs  = var.private_subnet_cidrs
-  availability_zones    = var.availability_zones
-  environment           = var.environment
+  vpc_cidr             = var.vpc_cidr
+  public_subnet_cidrs  = var.public_subnet_cidrs
+  private_subnet_cidrs = var.private_subnet_cidrs
+  availability_zones   = var.availability_zones
+  environment          = var.environment
 }
 
 module "security_groups" {
   source = "../../modules/security-groups"
 
-  vpc_id       = module.vpc.vpc_id
-  environment  = var.environment
+  vpc_id      = module.vpc.vpc_id
+  environment = var.environment
 }
 
 module "secrets" {
@@ -60,4 +60,13 @@ module "rds" {
   instance_class          = var.db_instance_class
   multi_az                = var.db_multi_az
   backup_retention_period = var.db_backup_retention_period
+}
+
+module "alb" {
+  source = "../../modules/alb"
+
+  environment       = var.environment
+  vpc_id            = module.vpc.vpc_id
+  public_subnet_ids = module.vpc.public_subnet_ids
+  alb_sg_id         = module.security_groups.alb_sg_id
 }
