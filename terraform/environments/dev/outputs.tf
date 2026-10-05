@@ -53,3 +53,15 @@ output "alb_arn_suffix" {
 output "ecr_repository_url" {
   value = module.ecr.repository_url
 }
+
+output "ecs_cluster_name" {
+  value = module.compute.cluster_name
+}
+
+output "ecs_service_name" {
+  value = module.compute.service_name
+}
+
+output "app_log_group" {
+  value = module.compute.log_group_name
+}

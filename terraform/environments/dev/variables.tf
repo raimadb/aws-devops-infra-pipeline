@@ -38,3 +38,19 @@ variable "db_backup_retention_period" {
 variable "ecr_force_delete" {
   type = bool
 }
+
+variable "image_tag" {
+  type = string
+}
+
+variable "app_cpu" {
+  type = number
+}
+
+variable "app_memory" {
+  type = number
+}
+
+variable "app_desired_count" {
+  type = number
+}

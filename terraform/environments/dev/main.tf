@@ -77,3 +77,22 @@ module "ecr" {
   environment  = var.environment
   force_delete = var.ecr_force_delete
 }
+
+module "compute" {
+  source = "../../modules/compute"
+
+  environment        = var.environment
+  private_subnet_ids = module.vpc.private_subnet_ids
+  app_sg_id          = module.security_groups.app_sg_id
+  target_group_arn   = module.alb.target_group_arn
+  ecr_repository_url = module.ecr.repository_url
+  image_tag          = var.image_tag
+  db_host            = module.rds.db_address
+  db_port            = module.rds.db_port
+  db_name            = module.rds.db_name
+  db_username_param  = module.secrets.db_username_param
+  db_password_param  = module.secrets.db_password_param
+  cpu                = var.app_cpu
+  memory             = var.app_memory
+  desired_count      = var.app_desired_count
+}
