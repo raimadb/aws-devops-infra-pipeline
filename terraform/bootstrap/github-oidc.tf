@@ -3,10 +3,27 @@
 # This lives in bootstrap because the OIDC provider is account-wide: only one can exist
 # per account, so it must not be created per environment.
 
-variable "github_repo" {
+# GitHub's default OIDC subject for repositories created after July 15, 2026 embeds the
+# immutable numeric IDs: repo:<owner>@<owner_id>/<repo>@<repo_id>:ref:refs/heads/<branch>
+# The values come from terraform.tfvars (generated with `gh api`, see below).
+variable "github_owner" {
   type        = string
-  default     = "raimadb/aws-devops-infra-pipeline"
-  description = "GitHub repository (owner/name) allowed to assume the deploy roles"
+  description = "GitHub user or organization that owns the repository, exactly as GitHub spells it"
+}
+
+variable "github_owner_id" {
+  type        = string
+  description = "Numeric ID of the owner (gh api repos/OWNER/REPO --jq .owner.id)"
+}
+
+variable "github_repo_name" {
+  type        = string
+  description = "Repository name, exactly as GitHub spells it"
+}
+
+variable "github_repo_id" {
+  type        = string
+  description = "Numeric ID of the repository (gh api repos/OWNER/REPO --jq .id)"
 }
 
 data "aws_caller_identity" "current" {}
@@ -21,12 +38,15 @@ resource "aws_iam_openid_connect_provider" "github" {
 }
 
 locals {
+  # Start of every subject GitHub issues for this repository.
+  repo_subject = "repo:${var.github_owner}@${var.github_owner_id}/${var.github_repo_name}@${var.github_repo_id}"
+
   # Which GitHub token "subject" may assume each environment's deploy role.
   # dev: pushes to the develop branch of this repo only.
   # qa and production are added here later (production will require the GitHub
   # environment "production", which is where the manual approval gate lives).
   deploy_roles = {
-    dev = "repo:${var.github_repo}:ref:refs/heads/develop"
+    dev = "${local.repo_subject}:ref:refs/heads/develop"
   }
 }
 
