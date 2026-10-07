@@ -9,7 +9,6 @@ db_multi_az                = false
 db_backup_retention_period = 1
 
 ecr_force_delete  = true
-image_tag         = "latest"
 app_cpu           = 256
 app_memory        = 512
 app_desired_count = 1
