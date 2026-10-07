@@ -2,10 +2,9 @@ name: CI
 
 # Runs on every push to the environment branches and on every pull request.
 on:
-  push:
-    branches: [develop, qa, main]
   pull_request:
     branches: [develop, qa, main]
+  workflow_call:
 
 # Least privilege: the CI jobs only need to read the repo.
 permissions:
@@ -19,7 +18,7 @@ concurrency:
 jobs:
   lint:
     name: Lint (ruff)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -39,7 +38,7 @@ jobs:
 
   test:
     name: Unit and integration tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     # A throwaway PostgreSQL for the integration tests, started next to the job.
     services:
@@ -91,7 +90,7 @@ jobs:
 
   terraform:
     name: Terraform fmt and validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -111,7 +110,7 @@ jobs:
 
   scan-dependencies:
     name: Trivy dependency scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -128,7 +127,7 @@ jobs:
 
   scan-image:
     name: Trivy container image scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
