@@ -102,11 +102,12 @@ jobs:
         run: terraform fmt -check -recursive terraform
 
       # -backend=false: validate the code without touching the S3 state or needing AWS credentials.
-      - name: Validate dev
-        working-directory: terraform/environments/dev
+      - name: Validate every environment
         run: |
-          terraform init -backend=false -input=false
-          terraform validate
+          for env in dev qa production; do
+            echo "== $env =="
+            (cd terraform/environments/$env && terraform init -backend=false -input=false && terraform validate)
+          done
 
   scan-dependencies:
     name: Trivy dependency scan

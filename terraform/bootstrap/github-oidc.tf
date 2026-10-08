@@ -46,7 +46,9 @@ locals {
   # qa and production are added here later (production will require the GitHub
   # environment "production", which is where the manual approval gate lives).
   deploy_roles = {
-    dev = "${local.repo_subject}:ref:refs/heads/develop"
+    dev        = "${local.repo_subject}:ref:refs/heads/develop"
+    qa         = "${local.repo_subject}:ref:refs/heads/qa"
+    production = "${local.repo_subject}:environment:production"
   }
 }
 

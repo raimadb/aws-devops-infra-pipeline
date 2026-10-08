@@ -1,6 +1,6 @@
 name: CD - dev
 
-# Every push to develop: run CI, then build the image, push it to ECR and apply Terraform.
+# Every push to develop: run CI, then build, push and deploy to dev.
 on:
   push:
     branches: [develop]
@@ -32,7 +32,7 @@ jobs:
     name: Build, push and deploy to dev
     needs: ci
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
       id-token: write # lets this job request the OIDC token that AWS verifies
@@ -54,6 +54,24 @@ jobs:
           echo "REGISTRY=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> "$GITHUB_ENV"
           echo "IMAGE_TAG=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.x"
+          terraform_wrapper: false
+
+      - name: Terraform init
+        working-directory: terraform/environments/dev
+        run: terraform init -input=false
+
+      # A brand-new environment has no image repository yet, and the service cannot start
+      # without an image. Create just the repository and the secrets first (a no-op afterwards).
+      - name: Make sure the ECR repository and secrets exist
+        working-directory: terraform/environments/dev
+        run: |
+          terraform apply -input=false -auto-approve \
+            -target=module.ecr -target=module.secrets \
+            -var "image_tag=${IMAGE_TAG}"
+
       - name: Log in to ECR
         run: |
           aws ecr get-login-password --region "$AWS_REGION" \
@@ -65,15 +83,6 @@ jobs:
           docker build --provenance=false -t "${IMAGE}:${IMAGE_TAG}" -t "${IMAGE}:latest" app
           docker push "${IMAGE}:${IMAGE_TAG}"
           docker push "${IMAGE}:latest"
-
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.16.x"
-          terraform_wrapper: false
-
-      - name: Terraform init
-        working-directory: terraform/environments/dev
-        run: terraform init -input=false
 
       - name: Terraform plan
         working-directory: terraform/environments/dev
