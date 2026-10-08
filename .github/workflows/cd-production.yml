@@ -1,0 +1,139 @@
+name: CD - production
+
+# Every push to main (a merge from qa): run CI, then WAIT for a reviewer to approve the
+# 'production' GitHub environment, then build, push and deploy to production.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never cancel a running deployment. A newer push waits for the current one to finish.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-south-1
+  ENVIRONMENT: production
+  AWS_ROLE_ARN: arn:aws:iam::106834398796:role/github-actions-production
+
+jobs:
+  # Reuses ci.yml, so nothing is deployed unless lint, tests, terraform checks and scans pass.
+  ci:
+    name: CI gate
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Build, push and deploy to production
+    needs: ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    # The job pauses here until a required reviewer approves. The AWS role only trusts this environment.
+    environment: production
+    permissions:
+      contents: read
+      id-token: write # lets this job request the OIDC token that AWS verifies
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # Third-party action pinned to a full commit SHA, not a movable tag.
+      - name: Configure AWS credentials (OIDC, no stored keys)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-cd-production-${{ github.run_id }}
+
+      - name: Work out image name and tag
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "REGISTRY=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> "$GITHUB_ENV"
+          echo "IMAGE_TAG=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.x"
+          terraform_wrapper: false
+
+      - name: Terraform init
+        working-directory: terraform/environments/production
+        run: terraform init -input=false
+
+      # A brand-new environment has no image repository yet, and the service cannot start
+      # without an image. Create just the repository and the secrets first (a no-op afterwards).
+      - name: Make sure the ECR repository and secrets exist
+        working-directory: terraform/environments/production
+        run: |
+          terraform apply -input=false -auto-approve \
+            -target=module.ecr -target=module.secrets \
+            -var "image_tag=${IMAGE_TAG}"
+
+      - name: Log in to ECR
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login --username AWS --password-stdin "$REGISTRY"
+
+      - name: Build and push image
+        run: |
+          IMAGE="${REGISTRY}/${ENVIRONMENT}-app"
+          docker build --provenance=false -t "${IMAGE}:${IMAGE_TAG}" -t "${IMAGE}:latest" app
+          docker push "${IMAGE}:${IMAGE_TAG}"
+          docker push "${IMAGE}:latest"
+
+      - name: Terraform plan
+        working-directory: terraform/environments/production
+        run: terraform plan -input=false -out=tfplan -var "image_tag=${IMAGE_TAG}"
+
+      # Safety net: a pipeline must never delete the database on its own.
+      - name: Guard against deleting the database
+        working-directory: terraform/environments/production
+        run: |
+          terraform show -json tfplan > plan.json
+          if jq -e '[.resource_changes[]? | select(.type == "aws_db_instance" and (.change.actions | index("delete")))] | length > 0' plan.json > /dev/null; then
+            echo "::error::This plan deletes or replaces the RDS instance. Review it and apply by hand."
+            exit 1
+          fi
+          rm -f plan.json
+
+      - name: Terraform apply
+        working-directory: terraform/environments/production
+        run: terraform apply -input=false tfplan
+
+      # The task is replaced behind the load balancer, so retry while it comes up healthy.
+      - name: Smoke test
+        working-directory: terraform/environments/production
+        run: |
+          ALB=$(terraform output -raw alb_dns_name)
+          curl --fail --silent --show-error --retry 10 --retry-delay 10 --retry-all-errors "http://${ALB}/health"
+          echo
+          echo "Deployed ${IMAGE_TAG} to production: http://${ALB}" >> "$GITHUB_STEP_SUMMARY"
+
+  notify-failure:
+    name: Notify Slack on failure
+    needs: [ci, deploy]
+    if: ${{ failure() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Post to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          ACTOR: ${{ github.actor }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL is not set; skipping notification"
+            exit 0
+          fi
+          TEXT=":x: production pipeline failed on ${SHA::7} by ${ACTOR}: ${COMMIT_MSG%%$'\n'*}
+          ${RUN_URL}"
+          jq -n --arg text "$TEXT" '{text: $text}' \
+            | curl -sS --fail -X POST -H 'Content-type: application/json' --data @- "$SLACK_WEBHOOK_URL"

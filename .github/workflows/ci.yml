@@ -1,0 +1,146 @@
+name: CI
+
+# Runs on every push to the environment branches and on every pull request.
+on:
+  pull_request:
+    branches: [develop, qa, main]
+  workflow_call:
+
+# Least privilege: the CI jobs only need to read the repo.
+permissions:
+  contents: read
+
+# A newer push to the same ref cancels the older, now-pointless run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            app/requirements.txt
+            app/requirements-dev.txt
+
+      - name: Install dev dependencies
+        run: pip install -r app/requirements-dev.txt
+
+      - name: Ruff check
+        run: cd app && ruff check .
+
+  test:
+    name: Unit and integration tests
+    runs-on: ubuntu-24.04
+
+    # A throwaway PostgreSQL for the integration tests, started next to the job.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: appdb
+          POSTGRES_USER: appadmin
+          POSTGRES_PASSWORD: localpass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U appadmin -d appdb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # The app reads its database settings from these variables.
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_NAME: appdb
+      DB_USER: appadmin
+      DB_PASSWORD: localpass
+
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            app/requirements.txt
+            app/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Unit tests (no database needed)
+        run: pytest -m "not integration" -v
+
+      - name: Integration tests (real PostgreSQL)
+        run: pytest -m integration -v
+
+  terraform:
+    name: Terraform fmt and validate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.x"
+
+      - name: Format check
+        run: terraform fmt -check -recursive terraform
+
+      # -backend=false: validate the code without touching the S3 state or needing AWS credentials.
+      - name: Validate every environment
+        run: |
+          for env in dev qa production; do
+            echo "== $env =="
+            (cd terraform/environments/$env && terraform init -backend=false -input=false && terraform validate)
+          done
+
+  scan-dependencies:
+    name: Trivy dependency scan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      # Third-party action pinned to a full commit SHA, not a movable tag.
+      - name: Scan Python dependencies
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: app
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  scan-image:
+    name: Trivy container image scan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build image (not pushed)
+        run: docker build -t dev-app:ci app
+
+      - name: Scan image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: dev-app:ci
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"

@@ -2,8 +2,8 @@
 **/.terraform/
 *.tfstate
 *.tfstate.backup
-*.tfvars
-!*.tfvars.example
+*.tfplan
+tfplan
 crash.log
 
 # Python / FastAPI
@@ -17,3 +17,5 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store
+*:Zone.Identifier
+.venv/
