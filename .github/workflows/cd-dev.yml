@@ -102,3 +102,26 @@ jobs:
           curl --fail --silent --show-error --retry 10 --retry-delay 10 --retry-all-errors "http://${ALB}/health"
           echo
           echo "Deployed ${IMAGE_TAG} to dev: http://${ALB}" >> "$GITHUB_STEP_SUMMARY"
+
+  notify-failure:
+    name: Notify Slack on failure
+    needs: [ci, deploy]
+    if: ${{ failure() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Post to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          ACTOR: ${{ github.actor }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL is not set; skipping notification"
+            exit 0
+          fi
+          TEXT=":x: dev pipeline failed on ${SHA::7} by ${ACTOR}: ${COMMIT_MSG%%$'\n'*}
+          ${RUN_URL}"
+          jq -n --arg text "$TEXT" '{text: $text}' \
+            | curl -sS --fail -X POST -H 'Content-type: application/json' --data @- "$SLACK_WEBHOOK_URL"
